@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GestureOS — AI Hand Control System</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖐</text></svg>">
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- Socket.IO -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+  <!-- Tone.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+</head>
+<body>
+
+<!-- ── Background Effects ────────────────────────────────────────────────── -->
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+<div class="bg-grid"></div>
+<canvas id="particles-canvas"></canvas>
+
+<!-- ── Flash Effect ──────────────────────────────────────────────────────── -->
+<div class="flash-overlay" id="flash-overlay"></div>
+
+<!-- ── Toast Container ───────────────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     NAVBAR
+══════════════════════════════════════════════════════════════════════ -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <div class="brand-dot"></div>
+    <span class="brand-name">GestureOS</span>
+  </div>
+  <div class="nav-actions">
+    <button class="btn-nav" id="btn-about">About</button>
+    <button class="btn-nav" id="btn-team">Team</button>
+    <div class="version-badge">v2.0 BETA</div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     SIDE PANEL
+══════════════════════════════════════════════════════════════════════ -->
+<div class="side-panel-overlay" id="side-panel-overlay"></div>
+<aside class="side-panel" id="side-panel">
+  <div class="panel-header">
+    <span class="panel-title">GestureOS</span>
+    <button class="btn-close" id="btn-close-panel">✕</button>
+  </div>
+
+  <!-- About Section -->
+  <div class="panel-section">
+    <div class="panel-section-title">About</div>
+    <p class="panel-desc">
+      GestureOS is an AI-powered hand gesture control system that lets you control your computer
+      using just your hands. Built with MediaPipe, OpenCV, and Tone.js, it delivers real-time
+      gesture recognition at 30 FPS with sub-100ms latency.
+    </p>
+    <p class="panel-desc">
+      Draw in the air, play music, control volume and brightness, navigate 3D objects, and
+      give voice commands — all without touching your keyboard.
+    </p>
+    <div class="tech-chips">
+      <span class="chip chip-python">Python</span>
+      <span class="chip chip-flask">Flask</span>
+      <span class="chip chip-mp">MediaPipe</span>
+      <span class="chip chip-cv">OpenCV</span>
+      <span class="chip chip-tone">Tone.js</span>
+      <span class="chip chip-voice">Voice AI</span>
+    </div>
+  </div>
+
+  <!-- Team Section -->
+  <div class="panel-section" id="team-section">
+    <div class="panel-section-title">Team</div>
+    <div class="team-grid">
+      <div class="team-member">
+        <div class="member-avatar avatar-cyan">UA</div>
+        <div class="member-info">
+          <div class="member-name">Usaid Ahmed</div>
+          <div class="member-role">Lead Developer</div>
+        </div>
+      </div>
+      <div class="team-member">
+        <div class="member-avatar avatar-pink">AN</div>
+        <div class="member-info">
+          <div class="member-name">Ayma Nadeem</div>
+          <div class="member-role">UI/UX Designer</div>
+        </div>
+      </div>
+      <div class="team-member">
+        <div class="member-avatar avatar-purple">AW</div>
+        <div class="member-info">
+          <div class="member-name">Aliza Waseem</div>
+          <div class="member-role">AI Integration</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════════════════════════════════════════ -->
+<div class="app-wrapper">
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header class="page-header">
+    <div class="header-icon">🖐</div>
+    <h1 class="main-title">GestureOS</h1>
+    <p class="main-subtitle">AI-Powered Hand Gesture Control System</p>
+    <div class="header-line"></div>
+  </header>
+
+  <!-- ── Status Bar ─────────────────────────────────────────────────────── -->
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="status-dot" id="dot-camera"></div>
+      <span class="status-label">Camera</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot" id="dot-hand"></div>
+      <span class="status-label">Hand Detection</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot" id="dot-voice"></div>
+      <span class="status-label">Voice Control</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Volume</span>
+      <span class="status-value" id="stat-volume">—%</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Brightness</span>
+      <span class="status-value" id="stat-brightness">—%</span>
+    </div>
+  </div>
+
+  <!-- ── Dashboard ──────────────────────────────────────────────────────── -->
+  <main class="dashboard-grid">
+
+    <!-- Card 1: Air Drawing -->
+    <div class="module-card card-cyan" data-module="drawing">
+      <div class="card-top">
+        <div class="card-icon-box icon-cyan">✏️</div>
+        <span class="status-badge badge-live">LIVE</span>
+      </div>
+      <h2 class="card-title">Air Drawing</h2>
+      <p class="card-desc">Draw in the air with your index finger. Create digital art using hand gestures tracked in real-time by MediaPipe.</p>
+      <div class="card-features">
+        <span class="feature-chip">Index Finger Draw</span>
+        <span class="feature-chip">Color Picker</span>
+        <span class="feature-chip">Brush Sizes</span>
+        <span class="feature-chip">Save as PNG</span>
+        <span class="feature-chip">Eraser Tool</span>
+      </div>
+      <button class="btn-launch">Launch Module <span>→</span></button>
+    </div>
+
+    <!-- Card 2: Volume & Brightness -->
+    <div class="module-card card-pink" data-module="volume">
+      <div class="card-top">
+        <div class="card-icon-box icon-pink">🔊</div>
+        <span class="status-badge badge-live">LIVE</span>
+      </div>
+      <h2 class="card-title">Volume & Brightness</h2>
+      <p class="card-desc">Control system volume and screen brightness with pinch gestures. Right hand = volume, left hand = brightness.</p>
+      <div class="card-features">
+        <span class="feature-chip">Pinch Gesture</span>
+        <span class="feature-chip">Real Volume Control</span>
+        <span class="feature-chip">Brightness Adjust</span>
+        <span class="feature-chip">Mute Toggle</span>
+        <span class="feature-chip">Visual Meters</span>
+      </div>
+      <button class="btn-launch">Launch Module <span>→</span></button>
+    </div>
+
+    <!-- Card 3: Piano -->
+    <div class="module-card card-green" data-module="piano">
+      <div class="card-top">
+        <div class="card-icon-box icon-green">🎹</div>
+        <span class="status-badge badge-new">NEW</span>
+      </div>
+      <h2 class="card-title">Piano Instrument</h2>
+      <p class="card-desc">Play a virtual piano keyboard using hand gestures. Each finger maps to a piano key for multi-note chords.</p>
+      <div class="card-features">
+        <span class="feature-chip">2-Octave Piano</span>
+        <span class="feature-chip">Chord Support</span>
+        <span class="feature-chip">Tone.js Audio</span>
+        <span class="feature-chip">4 Waveforms</span>
+        <span class="feature-chip">Note History</span>
+      </div>
+      <button class="btn-launch">Launch Module <span>→</span></button>
+    </div>
+
+    <!-- Card 4: Theremin -->
+    <div class="module-card card-purple" data-module="theremin">
+      <div class="card-top">
+        <div class="card-icon-box icon-purple">🎵</div>
+        <span class="status-badge badge-beta">BETA</span>
+      </div>
+      <h2 class="card-title">Theremin Instrument</h2>
+      <p class="card-desc">Play an air theremin instrument. Hand position controls pitch (X) and volume (Y) for expressive music creation.</p>
+      <div class="card-features">
+        <span class="feature-chip">X = Pitch</span>
+        <span class="feature-chip">Y = Volume</span>
+        <span class="feature-chip">Waveform Select</span>
+        <span class="feature-chip">Live Visualizer</span>
+        <span class="feature-chip">Ghost Trail</span>
+      </div>
+      <button class="btn-launch">Launch Module <span>→</span></button>
+    </div>
+
+    <!-- Card 5: Spatial 3D -->
+    <div class="module-card card-orange" data-module="spatial">
+      <div class="card-top">
+        <div class="card-icon-box icon-orange">🎲</div>
+        <span class="status-badge badge-beta">BETA</span>
+      </div>
+      <h2 class="card-title">Spatial 3D Control</h2>
+      <p class="card-desc">Rotate and manipulate 3D wireframe objects with your hand. Open palm to rotate, pinch to zoom.</p>
+      <div class="card-features">
+        <span class="feature-chip">3D Rotation</span>
+        <span class="feature-chip">Pinch Zoom</span>
+        <span class="feature-chip">3 Shapes</span>
+        <span class="feature-chip">Auto-Rotate</span>
+        <span class="feature-chip">Canvas Renderer</span>
+      </div>
+      <button class="btn-launch">Launch Module <span>→</span></button>
+    </div>
+
+    <!-- Card 6: Voice Control -->
+    <div class="module-card card-pink" data-module="voice">
+      <div class="card-top">
+        <div class="card-icon-box icon-pink">🎙️</div>
+        <span class="status-badge badge-ai">AI</span>
+      </div>
+      <h2 class="card-title">Voice Control</h2>
+      <p class="card-desc">Control your system with natural voice commands. Uses Google Speech Recognition for real-time command execution.</p>
+      <div class="card-features">
+        <span class="feature-chip">Volume Commands</span>
+        <span class="feature-chip">Brightness Control</span>
+        <span class="feature-chip">Canvas Clear</span>
+        <span class="feature-chip">Selfie Capture</span>
+        <span class="feature-chip">Command Log</span>
+      </div>
+      <button class="btn-launch">Launch Module <span>→</span></button>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODULE MODAL
+══════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-container">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Module</div>
+      <button class="btn-modal-close" id="btn-modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <!-- Module content injected by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ── Scripts ────────────────────────────────────────────────────────────── -->
+<script src="/static/js/main.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+flask
+flask-socketio
+flask-cors
+eventlet
+opencv-python
+mediapipe
+SpeechRecognition
+pyaudio
+pycaw
+comtypes
+screen-brightness-control
+numpy
+Pillow
+python-dotenv

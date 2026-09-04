@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gesture Control System + AR</title>
+    
+    <!-- AR Libraries -->
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+        *{margin:0;padding:0;box-sizing:border-box;}
+        :root{
+            --bg-primary:#0a0a0f;--bg-secondary:#12121a;--bg-card:#1a1a2e;
+            --accent-1:#e94560;--accent-3:#533483;--accent-4:#00d2ff;--accent-5:#7928ca;
+            --text-primary:#ffffff;--text-secondary:#a0a0b8;
+            --glow-1:rgba(233,69,96,0.4);--glow-2:rgba(0,210,255,0.4);--glow-3:rgba(121,40,202,0.4);
+            --glow-4:rgba(255,154,0,0.4);--glow-5:rgba(0,255,136,0.4);
+            --border-color:rgba(255,255,255,0.06);
+        }
+        body{font-family:'Poppins',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow-x:hidden;}
+        .bg-animation{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;overflow:hidden;pointer-events:none;}
+        .bg-animation .orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.15;animation:floatOrb 20s ease-in-out infinite;}
+        .bg-animation .orb:nth-child(1){width:500px;height:500px;background:var(--accent-1);top:-100px;left:-100px;}
+        .bg-animation .orb:nth-child(2){width:400px;height:400px;background:var(--accent-4);bottom:-100px;right:-100px;animation-delay:-5s;}
+        .bg-animation .orb:nth-child(3){width:300px;height:300px;background:var(--accent-5);top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-10s;}
+        @keyframes floatOrb{0%,100%{transform:translate(0,0) scale(1);}25%{transform:translate(80px,-80px) scale(1.1);}50%{transform:translate(-60px,60px) scale(0.9);}75%{transform:translate(40px,40px) scale(1.05);}}
+        .particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+        .particle{position:absolute;width:3px;height:3px;background:rgba(255,255,255,0.3);border-radius:50%;animation:particleFloat linear infinite;}
+        @keyframes particleFloat{0%{transform:translateY(100vh) rotate(0deg);opacity:0;}10%{opacity:1;}90%{opacity:1;}100%{transform:translateY(-100px) rotate(720deg);opacity:0;}}
+
+        .hitms-corner-logo{
+            position:fixed;
+            top:20px;
+            left:20px;
+            z-index:100;
+            width:90px;
+            height:90px;
+            border-radius:50%;
+            object-fit:cover;
+            border:2px solid rgba(255,255,255,0.15);
+            box-shadow:0 0 25px rgba(0,210,255,0.25), 0 4px 15px rgba(0,0,0,0.4);
+            background:var(--bg-card);
+            transition:transform 0.3s, box-shadow 0.3s;
+            pointer-events:none;
+        }
+        .hitms-corner-logo:hover{
+            transform:scale(1.1);
+            box-shadow:0 0 35px rgba(0,210,255,0.4), 0 6px 20px rgba(0,0,0,0.5);
+        }
+
+        .created-badge{
+            position:fixed;
+            top:20px;
+            right:20px;
+            z-index:100;
+            padding:12px 24px;
+            border-radius:12px;
+            background:rgba(26,26,46,0.7);
+            backdrop-filter:blur(10px);
+            border:1px solid rgba(255,255,255,0.08);
+            pointer-events:none;
+            user-select:none;
+        }
+        .created-badge span{
+            font-size:1.1rem;
+            font-weight:700;
+            letter-spacing:0.5px;
+            background-image:linear-gradient(135deg,#e94560,#00d2ff);
+            -webkit-background-clip:text;
+            background-clip:text;
+            color:transparent;
+        }
+
+        .header{position:relative;z-index:10;text-align:center;padding:40px 20px 20px;}
+        .header .logo-icon{font-size:48px;margin-bottom:10px;display:inline-block;animation:pulse 2s ease-in-out infinite;}
+        @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+        .header h1{
+            font-size:2.8rem;
+            font-weight:800;
+            background:linear-gradient(135deg,#e94560,#00d2ff,#7928ca);
+            background-size:200% 200%;
+            -webkit-background-clip:text;
+            background-clip:text;
+            -webkit-text-fill-color:transparent;
+            color:transparent;
+            animation:gradientShift 4s ease infinite;
+            margin-bottom:8px;
+            letter-spacing:-1px;
+        }
+        @keyframes gradientShift{0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;}}
+        .header p{color:var(--text-secondary);font-size:1.05rem;font-weight:300;max-width:600px;margin:0 auto;}
+        .status-bar{position:relative;z-index:10;display:flex;justify-content:center;gap:30px;padding:15px 20px;flex-wrap:wrap;}
+        .status-item{display:flex;align-items:center;gap:8px;font-size:0.85rem;color:var(--text-secondary);}
+        .status-dot{width:10px;height:10px;border-radius:50%;background:#444;transition:background 0.3s;}
+        .status-dot.active{background:#00ff88;box-shadow:0 0 10px rgba(0,255,136,0.5);animation:statusPulse 2s ease-in-out infinite;}
+        @keyframes statusPulse{0%,100%{box-shadow:0 0 5px rgba(0,255,136,0.3);}50%{box-shadow:0 0 15px rgba(0,255,136,0.6);}}
+        .dashboard{position:relative;z-index:10;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;padding:30px 40px 50px;max-width:1400px;margin:0 auto;}
+        .card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:20px;padding:30px;cursor:pointer;transition:all 0.4s cubic-bezier(0.175,0.885,0.32,1.275);position:relative;overflow:hidden;}
+        .card::before{content:'';position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,transparent 0%,rgba(255,255,255,0.02) 100%);pointer-events:none;}
+        .card::after{content:'';position:absolute;top:-2px;left:-2px;right:-2px;bottom:-2px;border-radius:22px;z-index:-1;opacity:0;transition:opacity 0.4s;}
+        .card:hover{transform:translateY(-8px) scale(1.02);border-color:transparent;}
+        .card:hover::after{opacity:1;}
+        .card:nth-child(1)::after{background:linear-gradient(135deg,var(--accent-1),var(--accent-4));}
+        .card:nth-child(2)::after{background:linear-gradient(135deg,var(--accent-5),#ff6b9d);}
+        .card:nth-child(3)::after{background:linear-gradient(135deg,#ff9a00,#ff5500);}
+        .card:nth-child(4)::after{background:linear-gradient(135deg,#00ff88,#00b4d8);}
+        .card:nth-child(5)::after{background:linear-gradient(135deg,#7928ca,#e94560);}
+        .card:nth-child(1):hover{box-shadow:0 20px 60px var(--glow-1);}
+        .card:nth-child(2):hover{box-shadow:0 20px 60px var(--glow-3);}
+        .card:nth-child(3):hover{box-shadow:0 20px 60px var(--glow-4);}
+        .card:nth-child(4):hover{box-shadow:0 20px 60px var(--glow-5);}
+        .card:nth-child(5):hover{box-shadow:0 20px 60px var(--glow-2);}
+        .card-icon{width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:20px;}
+        .card:nth-child(1) .card-icon{background:linear-gradient(135deg,rgba(233,69,96,0.2),rgba(0,210,255,0.2));}
+        .card:nth-child(2) .card-icon{background:linear-gradient(135deg,rgba(121,40,202,0.2),rgba(255,107,157,0.2));}
+        .card:nth-child(3) .card-icon{background:linear-gradient(135deg,rgba(255,154,0,0.2),rgba(255,85,0,0.2));}
+        .card:nth-child(4) .card-icon{background:linear-gradient(135deg,rgba(0,255,136,0.2),rgba(0,180,216,0.2));}
+        .card:nth-child(5) .card-icon{background:linear-gradient(135deg,rgba(121,40,202,0.2),rgba(233,69,96,0.2));}
+        .card-title{font-size:1.3rem;font-weight:700;margin-bottom:8px;}
+        .card-desc{color:var(--text-secondary);font-size:0.9rem;line-height:1.6;margin-bottom:20px;}
+        .card-gestures{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+        .gesture-tag{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);padding:4px 12px;border-radius:20px;font-size:0.75rem;color:var(--text-secondary);}
+        .card-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border:none;border-radius:12px;font-family:'Poppins',sans-serif;font-size:0.9rem;font-weight:600;color:#fff;cursor:pointer;transition:all 0.3s;}
+        .card:nth-child(1) .card-btn{background:linear-gradient(135deg,#e94560,#00d2ff);}
+        .card:nth-child(2) .card-btn{background:linear-gradient(135deg,#7928ca,#ff6b9d);}
+        .card:nth-child(3) .card-btn{background:linear-gradient(135deg,#ff9a00,#ff5500);}
+        .card:nth-child(4) .card-btn{background:linear-gradient(135deg,#00ff88,#00b4d8);}
+        .card:nth-child(5) .card-btn{background:linear-gradient(135deg,#7928ca,#e94560);}
+        .card-btn:hover{transform:scale(1.05);box-shadow:0 5px 20px rgba(0,0,0,0.3);}
+
+        .modal-credit{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            justify-content:center;
+            padding:14px 0 4px;
+            font-size:0.8rem;
+            color:rgba(255,255,255,0.5);
+            border-top:1px solid var(--border-color);
+            margin-top:20px;
+            font-weight:500;
+        }
+        .modal-credit img{
+            width:28px;
+            height:28px;
+            border-radius:50%;
+            object-fit:cover;
+            opacity:0.7;
+            border:1px solid rgba(255,255,255,0.1);
+        }
+
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);z-index:1000;display:none;align-items:center;justify-content:center;animation:fadeIn 0.3s;}
+        .modal-overlay.active{display:flex;}
+        @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+        .modal{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:24px;width:95%;max-width:1200px;max-height:90vh;overflow-y:auto;padding:30px;position:relative;animation:slideUp 0.4s cubic-bezier(0.175,0.885,0.32,1.275);}
+        @keyframes slideUp{from{transform:translateY(50px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+        .modal-close{position:absolute;top:20px;right:20px;width:40px;height:40px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s;z-index:10;}
+        .modal-close:hover{background:var(--accent-1);border-color:var(--accent-1);}
+        .modal-header{display:flex;align-items:center;gap:16px;margin-bottom:24px;padding-right:50px;}
+        .modal-header .icon{font-size:36px;}
+        .modal-header h2{font-size:1.6rem;font-weight:700;}
+        .modal-header p{color:var(--text-secondary);font-size:0.9rem;}
+        .modal-content{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+        .camera-container{position:relative;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:4/3;}
+        .camera-container video,.camera-container canvas{width:100%;height:100%;object-fit:cover;display:block;}
+        .camera-container canvas{position:absolute;top:0;left:0;}
+        .camera-label{position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.6);backdrop-filter:blur(10px);padding:6px 14px;border-radius:8px;font-size:0.75rem;color:#fff;display:flex;align-items:center;gap:6px;z-index:5;}
+        .camera-label .rec-dot{width:8px;height:8px;background:#ff0040;border-radius:50%;animation:recBlink 1s ease-in-out infinite;}
+        @keyframes recBlink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+        .controls-section{display:flex;flex-direction:column;gap:16px;}
+        .gesture-info-box{background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:20px;}
+        .gesture-info-box h3{font-size:1rem;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+        .gesture-list{list-style:none;}
+        .gesture-list li{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-color);font-size:0.88rem;}
+        .gesture-list li:last-child{border-bottom:none;}
+        .gesture-list .gesture-emoji{font-size:1.4rem;width:36px;text-align:center;}
+        .gesture-list .gesture-name{font-weight:600;min-width:100px;}
+        .gesture-list .gesture-action{color:var(--text-secondary);}
+        .output-box{background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:20px;flex:1;}
+        .output-box h3{font-size:1rem;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+        .output-display{min-height:100px;display:flex;align-items:center;justify-content:center;flex-direction:column;font-size:1.1rem;color:var(--text-secondary);text-align:center;}
+
+        /* Media Control Styles */
+        .dual-control-container{width:100%;display:flex;flex-direction:column;gap:20px;}
+        .control-item{width:100%;}
+        .control-label{display:flex;align-items:center;gap:8px;font-size:0.9rem;color:var(--text-secondary);margin-bottom:8px;}
+        .control-label span{font-size:1.2rem;}
+        .volume-bar-container{width:100%;height:30px;background:rgba(255,255,255,0.05);border-radius:15px;overflow:hidden;margin-top:5px;position:relative;}
+        .volume-bar{height:100%;width:50%;background:linear-gradient(90deg,#e94560,#00d2ff);border-radius:15px;transition:width 0.05s ease-out;}
+        .brightness-bar{height:100%;width:50%;background:linear-gradient(90deg,#ff9a00,#ff5500);border-radius:15px;transition:width 0.05s ease-out;}
+        .value-display{font-size:2rem;font-weight:700;margin-top:5px;text-align:center;}
+        .media-upload-area{border:2px dashed rgba(255,255,255,0.15);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all 0.3s;margin-top:15px;}
+        .media-upload-area:hover{border-color:var(--accent-4);background:rgba(0,210,255,0.05);}
+        .media-upload-area input{display:none;}
+        
+        /* Drawing Canvas */
+        .color-canvas-container{width:100%;aspect-ratio:4/3;background:#111;border-radius:12px;overflow:hidden;margin-top:10px;}
+        .color-canvas-container canvas{width:100%;height:100%;}
+        
+        /* Zoom Control */
+        .zoom-image-container{width:100%;aspect-ratio:4/3;background:#111;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;}
+        .zoom-image-container img{transition:transform 0.05s ease-out;max-width:100%;max-height:100%;}
+        .zoom-value{font-size:3rem;font-weight:800;background:linear-gradient(135deg,#00ff88,#00b4d8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;}
+        
+        /* Camera Capture */
+        .camera-capture-container{position:relative; width:100%; aspect-ratio:4/3; background:#111; border-radius:12px; overflow:hidden; cursor:pointer;}
+        .photo-gallery{display:grid; grid-template-columns:repeat(auto-fill, minmax(80px,1fr)); gap:8px; margin-top:12px; max-height:150px; overflow-y:auto; padding:8px; background:var(--bg-card); border-radius:12px;}
+        
+        /* AR Container */
+        .ar-container{position:relative; width:100%; aspect-ratio:4/3; background:#111; border-radius:12px; overflow:hidden;}
+        .marker-guide{display:flex; flex-direction:column; align-items:center; margin-top:15px; padding:15px; background:var(--bg-card); border-radius:12px;}
+        .marker-img{width:150px; height:150px; border:2px solid var(--accent-4); border-radius:8px; margin:10px 0;}
+        .ar-object-buttons{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:12px 0;}
+        
+        /* Background Music Player */
+        .bg-music-player {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 50px;
+            padding: 12px 25px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s;
+            border-left: 3px solid var(--accent-4);
+        }
+        .bg-music-player:hover {
+            transform: scale(1.05);
+            border-color: var(--accent-4);
+            box-shadow: 0 0 20px var(--glow-2);
+        }
+        .music-controls {
+            display: flex;
+            gap: 10px;
+        }
+        .music-btn {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: all 0.3s;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .music-btn:hover {
+            background: var(--accent-4);
+            color: #000;
+            transform: scale(1.1);
+        }
+        .music-volume {
+            width: 80px;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+        .music-volume-fill {
+            height: 100%;
+            width: 50%;
+            background: linear-gradient(90deg, var(--accent-1), var(--accent-4));
+            border-radius: 2px;
+            position: relative;
+        }
+        .music-volume-fill::after {
+            content: '';
+            position: absolute;
+            right: -3px;
+            top: -3px;
+            width: 10px;
+            height: 10px;
+            background: var(--accent-4);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-4);
+        }
+        
+        .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--bg-card);border:1px solid var(--border-color);padding:14px 28px;border-radius:16px;font-size:0.9rem;z-index:2000;display:flex;align-items:center;gap:10px;transition:transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275);box-shadow:0 10px 40px rgba(0,0,0,0.4);}
+        .toast.show{transform:translateX(-50%) translateY(0);}
+        .hand-landmark-info{font-size:0.8rem;color:var(--text-secondary);text-align:center;padding:8px;}
+        .upload-area{border:2px dashed rgba(255,255,255,0.15);border-radius:16px;padding:30px;text-align:center;cursor:pointer;transition:all 0.3s;margin-bottom:12px;}
+        .upload-area:hover{border-color:var(--accent-4);background:rgba(0,210,255,0.05);}
+        .upload-area input{display:none;}
+        .upload-area .upload-icon{font-size:2.5rem;margin-bottom:8px;}
+        .upload-area .upload-text{font-size:0.9rem;color:var(--text-secondary);}
+        .upload-area .upload-text strong{color:var(--accent-4);}
+        .action-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border:1px solid var(--border-color);border-radius:10px;background:var(--bg-card);color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:0.8rem;cursor:pointer;transition:all 0.3s;margin:4px;}
+        .action-btn:hover{background:var(--accent-4);border-color:var(--accent-4);color:#000;}
+        .audio-player-mini{width:100%;margin-top:12px;}
+        .audio-player-mini audio{width:100%;height:36px;border-radius:8px;}
+        
+        /* AR Instructions */
+        .ar-instructions {
+            background: linear-gradient(135deg, rgba(233,69,96,0.1), rgba(0,210,255,0.1));
+            border-left: 3px solid var(--accent-4);
+            padding: 15px;
+            border-radius: 12px;
+            margin: 15px 0;
+            text-align: left;
+        }
+        .ar-instructions ol {
+            margin-left: 20px;
+            color: var(--text-secondary);
+        }
+        .ar-instructions li {
+            margin: 8px 0;
+        }
+        
+        @media(max-width:768px){
+            .header h1{font-size:1.8rem;}
+            .dashboard{padding:20px;gap:16px;}
+            .modal-content{grid-template-columns:1fr;}
+            .modal{padding:20px;}
+            .hitms-corner-logo{width:60px;height:60px;top:12px;left:12px;}
+            .created-badge{top:12px;right:12px;padding:8px 14px;}
+            .created-badge span{font-size:0.85rem;}
+            .bg-music-player{bottom:10px;right:10px;padding:8px 15px;}
+        }
+        ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--bg-primary);}::-webkit-scrollbar-thumb{background:var(--bg-card);border-radius:3px;}
+    </style>
+</head>
+<body>
+
+    <img src="hitms-logo.jpg" alt="HITMS" class="hitms-corner-logo" onerror="this.style.display='none'">
+
+    <div class="created-badge">
+        <span>Created by Usaid Ahmed</span>
+    </div>
+
+    <!-- Background Music Player -->
+    <div class="bg-music-player">
+        <span style="font-size:20px; color: var(--accent-4);">🎵</span>
+        <div class="music-controls">
+            <button class="music-btn" onclick="toggleBackgroundMusic()" id="musicPlayBtn">⏸️</button>
+            <button class="music-btn" onclick="nextBackgroundTrack()">⏭️</button>
+        </div>
+        <div class="music-volume" onclick="setMusicVolume(event)">
+            <div class="music-volume-fill" id="musicVolumeFill" style="width:50%"></div>
+        </div>
+    </div>
+    <audio id="backgroundMusic" loop style="display:none;"></audio>
+
+    <div class="bg-animation"><div class="orb"></div><div class="orb"></div><div class="orb"></div></div>
+    <div class="particles" id="particles"></div>
+    <div class="header">
+        <div class="logo-icon">🤖</div>
+        <h1>Gesture Control System + AR</h1>
+        <p>Control your world with hand gestures — Now with Augmented Reality!</p>
+    </div>
+    <div class="status-bar">
+        <div class="status-item"><div class="status-dot" id="cameraStatus"></div><span>Camera</span></div>
+        <div class="status-item"><div class="status-dot" id="modelStatus"></div><span>AI Model</span></div>
+        <div class="status-item"><div class="status-dot" id="gestureStatus"></div><span>Gesture Engine</span></div>
+    </div>
+    <div class="dashboard">
+        <!-- Media Control (Volume + Brightness) -->
+        <div class="card" onclick="openModule(0)">
+            <div class="card-icon">🎚️</div>
+            <div class="card-title">Media Control</div>
+            <div class="card-desc">Control volume and brightness with hand gestures. Pinch/spread for volume, open palm for brightness up, fist for brightness down.</div>
+            <div class="card-gestures">
+                <span class="gesture-tag">🤏 Volume Down</span>
+                <span class="gesture-tag">✌️ Volume Up</span>
+                <span class="gesture-tag">🖐️ Brightness Up</span>
+                <span class="gesture-tag">✊ Brightness Down</span>
+            </div>
+            <button class="card-btn">Launch ▸</button>
+        </div>
+
+        <!-- Air Drawing Canvas -->
+        <div class="card" onclick="openModule(1)">
+            <div class="card-icon">🎨</div>
+            <div class="card-title">Air Drawing Canvas</div>
+            <div class="card-desc">Draw in the air with your index finger. Change colors, clear canvas, and download your art.</div>
+            <div class="card-gestures"><span class="gesture-tag">☝️ Draw</span><span class="gesture-tag">✊ Stop</span><span class="gesture-tag">🖐️ Clear</span><span class="gesture-tag">✌️ Color</span></div>
+            <button class="card-btn">Launch ▸</button>
+        </div>
+
+        <!-- Camera Capture (Auto-save + Switch Camera) -->
+        <div class="card" onclick="openModule(2)">
+            <div class="card-icon">📸</div>
+            <div class="card-title">Camera Capture</div>
+            <div class="card-desc">Take photos with hand gestures. Photos auto-save. Switch between front/back camera.</div>
+            <div class="card-gestures"><span class="gesture-tag">👆 Take Photo</span><span class="gesture-tag">✌️ Switch Camera</span><span class="gesture-tag">⏱️ Timer 3s</span><span class="gesture-tag">✊ Close</span></div>
+            <button class="card-btn">Launch ▸</button>
+        </div>
+
+        <!-- Zoom Control -->
+        <div class="card" onclick="openModule(3)">
+            <div class="card-icon">🔍</div>
+            <div class="card-title">Zoom Control</div>
+            <div class="card-desc">Upload an image and zoom in/out with gestures. Spread to zoom in, pinch to zoom out.</div>
+            <div class="card-gestures"><span class="gesture-tag">🤲 Zoom In</span><span class="gesture-tag">🤏 Zoom Out</span><span class="gesture-tag">✊ Reset</span></div>
+            <button class="card-btn">Launch ▸</button>
+        </div>
+
+        <!-- AR Object Viewer -->
+        <div class="card" onclick="openModule(4)">
+            <div class="card-icon">🕶️</div>
+            <div class="card-title">AR Object Viewer</div>
+            <div class="card-desc">Place 3D objects in your real world! Print the marker and point camera at it.</div>
+            <div class="card-gestures"><span class="gesture-tag">🤏 Scale</span><span class="gesture-tag">👆 Rotate</span><span class="gesture-tag">🖐️ Move</span><span class="gesture-tag">✊ Reset</span></div>
+            <button class="card-btn">Launch ▸</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modalContent">
+            <button class="modal-close" onclick="closeModule()">✕</button>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+    <div class="toast" id="toast"><span id="toastIcon">✋</span><span id="toastText">Gesture Detected!</span></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675466124/drawing_utils.min.js"></script>
+
+    <script>
+        // Background Music Playlist - Using reliable audio sources
+        const musicTracks = [
+            'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+            'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+            'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+            'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3'
+        ];
+        let currentTrack = 0;
+        let isMusicPlaying = true; // Start playing by default
+        let musicVolume = 0.5;
+
+        function initBackgroundMusic() {
+            const audio = document.getElementById('backgroundMusic');
+            audio.src = musicTracks[currentTrack];
+            audio.volume = musicVolume;
+            
+            // Try to autoplay (may be blocked by browser)
+            audio.play().then(() => {
+                console.log('Music started playing');
+                document.getElementById('musicPlayBtn').textContent = '⏸️';
+            }).catch(e => {
+                console.log('Autoplay prevented:', e);
+                isMusicPlaying = false;
+                document.getElementById('musicPlayBtn').textContent = '▶️';
+                showToast('🔊', 'Click play button to start music');
+            });
+            
+            // Add event listeners for audio
+            audio.addEventListener('ended', nextBackgroundTrack);
+            audio.addEventListener('error', () => {
+                console.log('Audio error, trying next track');
+                nextBackgroundTrack();
+            });
+        }
+
+        function toggleBackgroundMusic() {
+            const audio = document.getElementById('backgroundMusic');
+            const btn = document.getElementById('musicPlayBtn');
+            
+            if (isMusicPlaying) {
+                audio.pause();
+                btn.textContent = '▶️';
+                showToast('⏸️', 'Music paused');
+            } else {
+                audio.play().catch(e => console.log('Play error:', e));
+                btn.textContent = '⏸️';
+                showToast('▶️', 'Now playing: Track ' + (currentTrack + 1));
+            }
+            isMusicPlaying = !isMusicPlaying;
+        }
+
+        function nextBackgroundTrack() {
+            const audio = document.getElementById('backgroundMusic');
+            const btn = document.getElementById('musicPlayBtn');
+            
+            currentTrack = (currentTrack + 1) % musicTracks.length;
+            audio.src = musicTracks[currentTrack];
+            
+            if (isMusicPlaying) {
+                audio.play().catch(e => console.log('Play error:', e));
+                showToast('⏭️', 'Now playing: Track ' + (currentTrack + 1));
+            }
+        }
+
+        function setMusicVolume(event) {
+            const rect = event.currentTarget.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const width = rect.width;
+            musicVolume = Math.max(0, Math.min(1, x / width));
+            
+            const audio = document.getElementById('backgroundMusic');
+            audio.volume = musicVolume;
+            
+            document.getElementById('musicVolumeFill').style.width = (musicVolume * 100) + '%';
+            showToast('🔊', 'Volume: ' + Math.round(musicVolume * 100) + '%');
+        }
+
+        // Initialize background music
+        initBackgroundMusic();
+
+        // Particles
+        const particlesContainer = document.getElementById('particles');
+        for(let i = 0; i < 50; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDuration = (Math.random() * 15 + 10) + 's';
+            p.style.animationDelay = (Math.random() * 15) + 's';
+            p.style.width = p.style.height = (Math.random() * 3 + 1) + 'px';
+            particlesContainer.appendChild(p);
+        }
+
+        // ==================== GLOBALS ====================
+        let currentModule = -1, camera = null, hands = null;
+        let videoElement = null, canvasElement = null, canvasCtx = null, isModuleActive = false;
+        let audioElement = null;
+        let zoomImageSrc = null;
+
+        let currentStream = null;
+        let usingFrontCamera = false;
+        let captureVideoElement = null;
+        let captureCanvasElement = null;
+        let captureCanvasCtx = null;
+        let photoGalleryElement = null;
+        let lastGestureTime = 0;
+        let photoCount = 0;
+        let timerInterval = null;
+        let countdownValue = 0;
+        let capturedPhotos = [];
+        let timerMode = false;
+        let lastFrameTime = 0;
+        const FRAME_RATE = 30;
+
+        // AR variables
+        let arScene = null;
+        let arMarker = null;
+        let currentARObject = null;
+
+        const modalCreditHTML = '<div class="modal-credit"><img src="hitms-logo.jpg" alt="HITMS" onerror="this.style.display=\'none\'"> Created by Usaid Ahmed</div>';
+
+        // Module states
+        const moduleStates = {
+            media: { volume: 50, brightness: 50, muted: false },
+            drawing: { isDrawing: false, points: [], color: '#00d2ff', drawCanvas: null, drawCtx: null },
+            zoom: { level: 100 },
+            ar: { scale: 1, rotation: 0, position: { x: 0, y: 0.5, z: 0 } }
+        };
+
+        // ==================== MODULE DEFINITIONS ====================
+        const modules = [
+            {
+                title: 'Media Control', 
+                icon: '🎚️', 
+                desc: 'Control volume and brightness with hand gestures',
+                gestures: [
+                    { emoji: '🤏', name: 'Pinch', action: 'Volume Down' },
+                    { emoji: '✌️', name: 'Spread', action: 'Volume Up' },
+                    { emoji: '🖐️', name: 'Open Palm', action: 'Brightness Up' },
+                    { emoji: '✊', name: 'Fist', action: 'Brightness Down' }
+                ],
+                outputHTML: () => `
+                    <div class="dual-control-container">
+                        <div class="control-item">
+                            <div class="control-label"><span>🔊</span> Volume</div>
+                            <div class="value-display" id="volumeValue">${moduleStates.media.volume}%</div>
+                            <div class="volume-bar-container">
+                                <div class="volume-bar" id="volumeBar" style="width:${moduleStates.media.volume}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="control-item">
+                            <div class="control-label"><span>☀️</span> Brightness</div>
+                            <div class="value-display" id="brightnessValue">${moduleStates.media.brightness}%</div>
+                            <div class="volume-bar-container">
+                                <div class="brightness-bar" id="brightnessBar" style="width:${moduleStates.media.brightness}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="media-upload-area" onclick="document.getElementById('mediaAudioUpload').click()">
+                            <input type="file" id="mediaAudioUpload" accept="audio/*" onchange="loadMediaAudio(event)">
+                            <div class="upload-icon">🎵</div>
+                            <div class="upload-text"><strong>Upload background music</strong><br>MP3, WAV, OGG supported</div>
+                        </div>
+                        
+                        <div class="audio-player-mini">
+                            <audio id="mediaAudioPlayer" controls loop style="width:100%;"></audio>
+                        </div>
+                        
+                        <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:10px; text-align:center;">
+                            ⚡ Pinch/spread for volume • Open palm for brightness up • Fist for brightness down
+                        </div>
+                    </div>`
+            },
+            {
+                title: 'Air Drawing Canvas', 
+                icon: '🎨', 
+                desc: 'Draw in the air with your finger',
+                gestures: [
+                    { emoji: '☝️', name: 'Index Up', action: 'Draw' },
+                    { emoji: '✊', name: 'Fist', action: 'Stop drawing' },
+                    { emoji: '🖐️', name: 'Open Palm', action: 'Clear canvas' },
+                    { emoji: '✌️', name: 'Peace', action: 'Change color' }
+                ],
+                outputHTML: () => `
+                    <div class="color-canvas-container"><canvas id="drawingCanvas"></canvas></div>
+                    <div style="text-align:center;margin-top:8px;">
+                        <span style="font-size:0.85rem;color:var(--text-secondary);">Current color: </span>
+                        <span id="currentColor" style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${moduleStates.drawing.color};vertical-align:middle;"></span>
+                        <button class="action-btn" onclick="downloadDrawing()" style="margin-left:12px;">💾 Download</button>
+                        <button class="action-btn" onclick="clearDrawingCanvas()">🗑️ Clear</button>
+                    </div>`
+            },
+            {
+                title: 'Camera Capture', 
+                icon: '📸', 
+                desc: 'Take photos with hand gestures - auto-saves to gallery',
+                gestures: [
+                    { emoji: '👆', name: 'Index Up', action: 'Take & Save Photo' },
+                    { emoji: '✌️', name: 'Peace', action: 'Switch Camera' },
+                    { emoji: '⏱️', name: 'Three Fingers', action: 'Timer Mode (3s)' },
+                    { emoji: '✊', name: 'Fist', action: 'Close Camera' }
+                ],
+                outputHTML: () => `
+                    <div style="text-align:center;">
+                        <div class="camera-capture-container" id="cameraCaptureContainer">
+                            <video id="captureVideo" style="width:100%; height:100%; object-fit:cover; display:none;"></video>
+                            <canvas id="captureCanvas" style="width:100%; height:100%; display:block;"></canvas>
+                            
+                            <div id="timerOverlay" style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.5); backdrop-filter:blur(5px); z-index:10; display:none;">
+                                <div style="font-size:5rem; font-weight:800; color:#fff; text-shadow:0 0 20px var(--accent-4);" id="timerDisplay">3</div>
+                            </div>
+                            
+                            <div style="position:absolute; bottom:10px; left:0; right:0; display:flex; justify-content:center; gap:10px; z-index:20;">
+                                <div style="background:rgba(0,0,0,0.6); backdrop-filter:blur(10px); padding:8px 16px; border-radius:20px; color:#fff; font-size:0.8rem; display:flex; gap:15px;">
+                                    <span id="cameraIndicator">📷 Back</span>
+                                    <span id="timerIndicator">⏱️ Off</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top:12px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+                            <button class="action-btn" onclick="takePhoto()" style="background:linear-gradient(135deg,#e94560,#7928ca);">📸 Take Photo</button>
+                            <button class="action-btn" onclick="switchCamera()">🔄 Switch Camera</button>
+                            <button class="action-btn" onclick="toggleTimerMode()">⏱️ Timer</button>
+                            <button class="action-btn" onclick="clearPhotos()">🗑️ Clear Gallery</button>
+                        </div>
+                        
+                        <div class="photo-gallery" id="photoGallery">
+                            <div style="grid-column:1/-1; text-align:center; color:var(--text-secondary); padding:10px;">No photos yet. Photos auto-save when taken.</div>
+                        </div>
+                    </div>`
+            },
+            {
+                title: 'Zoom Control', 
+                icon: '🔍', 
+                desc: 'Upload an image and zoom with gestures',
+                gestures: [
+                    { emoji: '🤲', name: 'Spread', action: 'Zoom In' },
+                    { emoji: '🤏', name: 'Pinch', action: 'Zoom Out' },
+                    { emoji: '✊', name: 'Fist', action: 'Reset Zoom' }
+                ],
+                outputHTML: () => {
+                    if (!zoomImageSrc) return `
+                        <div style="text-align:center;">
+                            <div class="upload-area" onclick="document.getElementById('zoomUpload').click()">
+                                <input type="file" id="zoomUpload" accept="image/*" onchange="loadZoomImage(event)">
+                                <div class="upload-icon">🖼️</div>
+                                <div class="upload-text"><strong>Click to upload an image</strong><br>JPG, PNG, GIF supported</div>
+                            </div>
+                        </div>`;
+                    return `
+                        <div style="text-align:center;">
+                            <div class="zoom-value" id="zoomValue">${moduleStates.zoom.level}%</div>
+                            <div style="font-size:0.9rem;color:var(--text-secondary);margin:4px 0 12px;">Zoom Level</div>
+                            <div class="zoom-image-container">
+                                <img id="zoomImage" src="${zoomImageSrc}" style="transform:scale(${moduleStates.zoom.level / 100});">
+                            </div>
+                            <div style="margin-top:12px;">
+                                <button class="action-btn" onclick="document.getElementById('zoomUpload2').click()">🖼️ Change Image</button>
+                                <input type="file" id="zoomUpload2" accept="image/*" onchange="loadZoomImage(event)" style="display:none;">
+                            </div>
+                        </div>`;
+                }
+            },
+            {
+                title: 'AR Object Viewer', 
+                icon: '🕶️', 
+                desc: 'Place 3D objects in your real world using markers',
+                gestures: [
+                    { emoji: '🤏', name: 'Pinch', action: 'Scale object down' },
+                    { emoji: '🤲', name: 'Spread', action: 'Scale object up' },
+                    { emoji: '👆', name: 'One Finger', action: 'Rotate object' },
+                    { emoji: '🖐️', name: 'Open Palm', action: 'Move object' },
+                    { emoji: '✊', name: 'Fist', action: 'Reset object' }
+                ],
+                outputHTML: () => `
+                    <div style="text-align:center;">
+                        <div class="ar-container" id="arContainer">
+                            <!-- AR Scene will be injected here -->
+                            <div id="arPlaceholder" style="width:100%; aspect-ratio:4/3; background:#111; display:flex; align-items:center; justify-content:center; border-radius:12px;">
+                                <div style="text-align:center;">
+                                    <div style="font-size:3rem; margin-bottom:10px;">🕶️</div>
+                                    <p style="color:var(--text-secondary);">Initializing AR...<br>Make sure to print the HIRO marker below</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="ar-instructions">
+                            <h4 style="color: var(--accent-4); margin-bottom: 8px;">📋 How to use AR:</h4>
+                            <ol>
+                                <li>Print or display the HIRO marker below on another screen</li>
+                                <li>Point your camera at the marker</li>
+                                <li>A 3D object will appear on top of the marker</li>
+                                <li>Use hand gestures to manipulate the object:</li>
+                                <ul style="margin-left: 20px; margin-top: 5px;">
+                                    <li>🤏 Pinch - Scale down</li>
+                                    <li>🤲 Spread - Scale up</li>
+                                    <li>👆 One finger - Rotate</li>
+                                    <li>🖐️ Open palm - Move</li>
+                                    <li>✊ Fist - Reset</li>
+                                </ul>
+                            </ol>
+                        </div>
+                        
+                        <div class="ar-object-buttons">
+                            <button class="action-btn" onclick="loadARObject('cube')">🧊 Cube</button>
+                            <button class="action-btn" onclick="loadARObject('sphere')">⚪ Sphere</button>
+                            <button class="action-btn" onclick="loadARObject('pyramid')">🔺 Pyramid</button>
+                            <button class="action-btn" onclick="loadARObject('dodecahedron')">⚽ Dodecahedron</button>
+                            <button class="action-btn" onclick="loadARObject('torus')">🍩 Torus</button>
+                        </div>
+                        
+                        <div class="marker-guide">
+                            <p style="color:var(--text-secondary); margin-bottom:10px;">👇 HIRO Marker (print or display this):</p>
+                            <img class="marker-img" src="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png" alt="Hiro Marker" onerror="this.src='data:image/svg+xml,%3Csvg width=\'200\' height=\'200\' viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Crect width=\'200\' height=\'200\' fill=\'white\'/%3E%3Crect x=\'20\' y=\'20\' width=\'160\' height=\'160\' fill=\'black\'/%3E%3Crect x=\'40\' y=\'40\' width=\'120\' height=\'120\' fill=\'white\'/%3E%3Ccircle cx=\'100\' cy=\'100\' r=\'30\' fill=\'black\'/%3E%3C/svg%3E'">
+                            <p style="font-size:0.8rem; color:var(--accent-4); font-weight: bold;">🔍 Point camera at marker to see 3D object!</p>
+                            <p style="font-size:0.7rem; color:var(--text-secondary);">💡 Tip: Use bright lighting for better detection</p>
+                            <p style="font-size:0.7rem; color:var(--text-secondary); margin-top: 5px;">⏱️ Detection may take a few seconds</p>
+                        </div>
+                        
+                        <div style="margin-top:12px; font-size:0.8rem; color:var(--text-secondary);">
+                            <span id="arObjectInfo">Current object: Cube</span>
+                        </div>
+                    </div>`
+            }
+        ];
+
+        // ==================== FILE LOADERS ====================
+        function loadMediaAudio(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            audioElement = document.getElementById('mediaAudioPlayer');
+            if (audioElement) {
+                audioElement.src = url;
+                audioElement.volume = moduleStates.media.volume / 100;
+                audioElement.play();
+                showToast('🎵', 'Background music loaded');
+            }
+        }
+
+        function loadZoomImage(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            zoomImageSrc = URL.createObjectURL(file);
+            moduleStates.zoom.level = 100;
+            showToast('🖼️', 'Image loaded');
+            const output = document.getElementById('outputDisplay');
+            if (output) output.innerHTML = modules[3].outputHTML();
+        }
+
+        function downloadDrawing() {
+            const dc = moduleStates.drawing.drawCanvas;
+            if (!dc) return;
+            const link = document.createElement('a');
+            link.download = 'gesture-drawing-' + Date.now() + '.png';
+            link.href = dc.toDataURL();
+            link.click();
+            showToast('💾', 'Drawing downloaded!');
+        }
+
+        function clearDrawingCanvas() {
+            const dc = moduleStates.drawing.drawCanvas;
+            const ctx = moduleStates.drawing.drawCtx;
+            if (!dc || !ctx) return;
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, dc.width, dc.height);
+            moduleStates.drawing.points = [];
+            showToast('🗑️', 'Canvas cleared!');
+        }
+
+        // ==================== OPEN / CLOSE MODULE ====================
+        function openModule(index) {
+            currentModule = index;
+            const mod = modules[index];
+            document.getElementById('modalBody').innerHTML = `
+                <div class="modal-header">
+                    <span class="icon">${mod.icon}</span>
+                    <div><h2>${mod.title}</h2><p>${mod.desc}</p></div>
+                </div>
+                <div class="modal-content">
+                    <div class="camera-section">
+                        <div class="camera-container">
+                            <video id="moduleVideo" playsinline></video>
+                            <canvas id="moduleCanvas"></canvas>
+                            <div class="camera-label"><div class="rec-dot"></div>LIVE</div>
+                        </div>
+                        <div class="hand-landmark-info" id="handInfo">Waiting for hand detection...</div>
+                    </div>
+                    <div class="controls-section">
+                        <div class="gesture-info-box">
+                            <h3>🎯 Gesture Controls</h3>
+                            <ul class="gesture-list">
+                                ${mod.gestures.map(g => `<li><span class="gesture-emoji">${g.emoji}</span><span class="gesture-name">${g.name}</span><span class="gesture-action">${g.action}</span></li>`).join('')}
+                            </ul>
+                        </div>
+                        <div class="output-box">
+                            <h3>📟 Output</h3>
+                            <div class="output-display" id="outputDisplay">${mod.outputHTML()}</div>
+                        </div>
+                    </div>
+                </div>
+                ${modalCreditHTML}`;
+            document.getElementById('modalOverlay').classList.add('active');
+            isModuleActive = true;
+
+            if (index === 1) { // Drawing module
+                setTimeout(() => {
+                    const dc = document.getElementById('drawingCanvas');
+                    if (dc) {
+                        dc.width = dc.parentElement.clientWidth;
+                        dc.height = dc.parentElement.clientHeight;
+                        moduleStates.drawing.drawCanvas = dc;
+                        moduleStates.drawing.drawCtx = dc.getContext('2d');
+                        moduleStates.drawing.drawCtx.fillStyle = '#111';
+                        moduleStates.drawing.drawCtx.fillRect(0, 0, dc.width, dc.height);
+                        moduleStates.drawing.points = [];
+                    }
+                }, 200);
+            }
+            if (index === 0) { // Media module
+                setTimeout(() => {
+                    audioElement = document.getElementById('mediaAudioPlayer');
+                    if (audioElement) audioElement.volume = moduleStates.media.volume / 100;
+                }, 200);
+            }
+            if (index === 2) { // Camera module
+                setTimeout(() => {
+                    initCameraCapture();
+                }, 300);
+            }
+            if (index === 4) { // AR module
+                setTimeout(() => {
+                    initARModule();
+                }, 500);
+            }
+            setTimeout(startCamera, 300);
+        }
+
+        function closeModule() {
+            document.body.style.filter = '';
+            isModuleActive = false;
+            currentModule = -1;
+            document.getElementById('modalOverlay').classList.remove('active');
+            stopCamera();
+
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            // Clean up AR scene
+            if (arScene) {
+                const container = document.getElementById('arContainer');
+                if (container) {
+                    container.innerHTML = '<div id="arPlaceholder" style="width:100%; aspect-ratio:4/3; background:#111; display:flex; align-items:center; justify-content:center; border-radius:12px;"><div style="text-align:center;"><div style="font-size:3rem; margin-bottom:10px;">🕶️</div><p style="color:var(--text-secondary);">AR Scene closed</p></div></div>';
+                }
+                arScene = null;
+            }
+        }
+
+        // ==================== CAMERA ====================
+        function startCamera() {
+            videoElement = document.getElementById('moduleVideo');
+            canvasElement = document.getElementById('moduleCanvas');
+            canvasCtx = canvasElement.getContext('2d');
+            hands = new Hands({
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
+            });
+            hands.setOptions({
+                maxNumHands: 2,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            hands.onResults(onHandResults);
+            camera = new Camera(videoElement, {
+                onFrame: async () => {
+                    if (isModuleActive && hands) await hands.send({ image: videoElement });
+                },
+                width: 640,
+                height: 480
+            });
+            camera.start().then(() => {
+                document.getElementById('cameraStatus').classList.add('active');
+                document.getElementById('modelStatus').classList.add('active');
+                document.getElementById('gestureStatus').classList.add('active');
+                canvasElement.width = 640;
+                canvasElement.height = 480;
+            });
+        }
+
+        function stopCamera() {
+            if (camera) {
+                camera.stop();
+                camera = null;
+            }
+            document.getElementById('cameraStatus').classList.remove('active');
+            document.getElementById('modelStatus').classList.remove('active');
+            document.getElementById('gestureStatus').classList.remove('active');
+        }
+
+        // ==================== HAND RESULTS ====================
+        function onHandResults(results) {
+            if (!isModuleActive || !canvasCtx) return;
+            
+            const now = performance.now();
+            if (now - lastFrameTime < 1000 / FRAME_RATE) return;
+            lastFrameTime = now;
+            
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            // Draw camera feed as background
+            if (videoElement) {
+                canvasCtx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+            }
+            
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                for (const lm of results.multiHandLandmarks) {
+                    drawConnectors(canvasCtx, lm, HAND_CONNECTIONS, { color: 'rgba(0,210,255,0.4)', lineWidth: 2 });
+                    drawLandmarks(canvasCtx, lm, { color: '#e94560', lineWidth: 1, radius: 3 });
+                }
+                
+                const hi = document.getElementById('handInfo');
+                if (hi) hi.textContent = `✋ ${results.multiHandLandmarks.length} hand(s) detected`;
+
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    processGesture(results.multiHandLandmarks);
+                }
+            } else {
+                const hi = document.getElementById('handInfo');
+                if (hi) hi.textContent = 'Waiting for hand detection...';
+            }
+            canvasCtx.restore();
+        }
+
+        // ==================== GESTURE PROCESSING ====================
+        function processGesture(allLm) {
+            const lm = allLm[0];
+            switch (currentModule) {
+                case 0: processMediaControl(lm); break;
+                case 1: processDrawing(lm); break;
+                case 2: processCameraGesture(lm); break;
+                case 3: processZoom(lm, allLm); break;
+                case 4: processARControl(lm); break;
+            }
+        }
+
+        function dist(a, b) {
+            return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+        }
+
+        function countFingersUp(lm) {
+            let c = 0;
+            if (lm[4].x < lm[3].x) c++;
+            if (lm[8].y < lm[6].y) c++;
+            if (lm[12].y < lm[10].y) c++;
+            if (lm[16].y < lm[14].y) c++;
+            if (lm[20].y < lm[18].y) c++;
+            return c;
+        }
+
+        function isFist(lm) {
+            return countFingersUp(lm) <= 1;
+        }
+
+        function isOpenPalm(lm) {
+            return countFingersUp(lm) >= 4;
+        }
+
+        function mapRange(v, iMin, iMax, oMin, oMax) {
+            return Math.min(oMax, Math.max(oMin, (v - iMin) * (oMax - oMin) / (iMax - iMin) + oMin));
+        }
+
+        // ==================== MODULE 0: MEDIA CONTROL ====================
+        let lastMediaGestureTime = 0;
+        const MEDIA_COOLDOWN = 200;
+
+        function processMediaControl(lm) {
+            const now = Date.now();
+            if (now - lastMediaGestureTime < MEDIA_COOLDOWN) return;
+            
+            const ap = document.getElementById('mediaAudioPlayer');
+            const fingers = countFingersUp(lm);
+            
+            // Open palm for brightness up (4+ fingers)
+            if (isOpenPalm(lm) && fingers >= 4) {
+                moduleStates.media.brightness = Math.min(100, moduleStates.media.brightness + 5);
+                showToast('☀️', `Brightness: ${moduleStates.media.brightness}%`);
+                lastMediaGestureTime = now;
+            }
+            // Fist for brightness down
+            else if (isFist(lm)) {
+                moduleStates.media.brightness = Math.max(0, moduleStates.media.brightness - 5);
+                showToast('🌙', `Brightness: ${moduleStates.media.brightness}%`);
+                lastMediaGestureTime = now;
+            }
+            // Volume control (2 fingers)
+            else if (lm[8].y < lm[6].y && lm[12].y > lm[10].y && fingers === 2) {
+                const d = dist(lm[4], lm[8]);
+                let vol = Math.round(mapRange(d, 0.03, 0.25, 0, 100));
+                moduleStates.media.volume = vol;
+                
+                if (ap) {
+                    ap.volume = vol / 100;
+                }
+                
+                lastMediaGestureTime = now;
+            }
+            
+            // Update UI
+            const ve = document.getElementById('volumeValue');
+            const be = document.getElementById('brightnessValue');
+            const vb = document.getElementById('volumeBar');
+            const bb = document.getElementById('brightnessBar');
+            
+            if (ve) ve.textContent = moduleStates.media.volume + '%';
+            if (be) be.textContent = moduleStates.media.brightness + '%';
+            if (vb) vb.style.width = moduleStates.media.volume + '%';
+            if (bb) bb.style.width = moduleStates.media.brightness + '%';
+            
+            document.body.style.filter = `brightness(${0.3 + (moduleStates.media.brightness / 100) * 0.9})`;
+        }
+
+        // ==================== MODULE 1: DRAWING ====================
+        const drawColors = ['#00d2ff', '#e94560', '#7928ca', '#ff9a00', '#00ff88', '#ff6b9d', '#fff'];
+        let colorIndex = 0, lastColorSwitch = 0;
+
+        function processDrawing(lm) {
+            const dc = moduleStates.drawing.drawCtx;
+            const dcC = moduleStates.drawing.drawCanvas;
+            if (!dc || !dcC) return;
+
+            const f = countFingersUp(lm);
+            const now = Date.now();
+
+            if (lm[8].y < lm[6].y && lm[12].y > lm[10].y) {
+                const x = lm[8].x * dcC.width;
+                const y = lm[8].y * dcC.height;
+
+                if (moduleStates.drawing.points.length > 0) {
+                    const last = moduleStates.drawing.points[moduleStates.drawing.points.length - 1];
+                    dc.beginPath();
+                    dc.moveTo(last.x, last.y);
+                    dc.lineTo(x, y);
+                    dc.strokeStyle = moduleStates.drawing.color;
+                    dc.lineWidth = 3;
+                    dc.lineCap = 'round';
+                    dc.stroke();
+                }
+                moduleStates.drawing.points.push({ x, y });
+            } else if (isFist(lm)) {
+                moduleStates.drawing.points = [];
+            } else if (isOpenPalm(lm) && f >= 5) {
+                dc.fillStyle = '#111';
+                dc.fillRect(0, 0, dcC.width, dcC.height);
+                moduleStates.drawing.points = [];
+                showToast('🖐️', 'Canvas Cleared!');
+            } else if (lm[8].y < lm[6].y && lm[12].y < lm[10].y && lm[16].y > lm[14].y) {
+                if (now - lastColorSwitch > 1000) {
+                    colorIndex = (colorIndex + 1) % drawColors.length;
+                    moduleStates.drawing.color = drawColors[colorIndex];
+                    lastColorSwitch = now;
+                    showToast('🎨', 'Color changed');
+                    const cc = document.getElementById('currentColor');
+                    if (cc) cc.style.background = moduleStates.drawing.color;
+                }
+                moduleStates.drawing.points = [];
+            } else {
+                moduleStates.drawing.points = [];
+            }
+        }
+
+        // ==================== MODULE 3: ZOOM ====================
+        let lastZoomTime = 0;
+        
+        function processZoom(lm, allLm) {
+            const now = Date.now();
+            if (now - lastZoomTime < 50) return;
+            
+            if (isFist(lm)) {
+                moduleStates.zoom.level = 100;
+                showToast('✊', 'Zoom Reset!');
+                lastZoomTime = now;
+            } else {
+                const d = dist(lm[4], lm[8]);
+                let z = Math.round(mapRange(d, 0.03, 0.3, 50, 400));
+                moduleStates.zoom.level = z;
+                lastZoomTime = now;
+            }
+
+            const ve = document.getElementById('zoomValue');
+            const img = document.getElementById('zoomImage');
+            if (ve) ve.textContent = moduleStates.zoom.level + '%';
+            if (img) img.style.transform = `scale(${moduleStates.zoom.level / 100})`;
+        }
+
+        // ==================== MODULE 2: CAMERA CAPTURE ====================
+        function initCameraCapture() {
+            captureVideoElement = document.getElementById('captureVideo');
+            captureCanvasElement = document.getElementById('captureCanvas');
+            captureCanvasCtx = captureCanvasElement.getContext('2d');
+            photoGalleryElement = document.getElementById('photoGallery');
+
+            if (!captureVideoElement || !captureCanvasElement) return;
+
+            startCaptureCamera();
+
+            const container = document.getElementById('cameraCaptureContainer');
+            if (container) {
+                container.addEventListener('click', function () {
+                    if (timerMode) {
+                        startTimerPhoto();
+                    } else {
+                        takePhoto();
+                    }
+                });
+            }
+
+            timerMode = false;
+            updateIndicators();
+        }
+
+        async function startCaptureCamera() {
+            try {
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                }
+
+                const constraints = {
+                    video: {
+                        facingMode: usingFrontCamera ? 'user' : 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                };
+
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                captureVideoElement.srcObject = currentStream;
+                captureVideoElement.style.display = 'block';
+                await captureVideoElement.play();
+
+                document.getElementById('cameraIndicator').textContent = usingFrontCamera ? '📷 Front' : '📷 Back';
+
+                function drawVideo() {
+                    if (!captureVideoElement || !captureCanvasCtx) return;
+
+                    const videoWidth = captureVideoElement.videoWidth;
+                    const videoHeight = captureVideoElement.videoHeight;
+
+                    if (videoWidth > 0 && videoHeight > 0) {
+                        captureCanvasElement.width = videoWidth;
+                        captureCanvasElement.height = videoHeight;
+                        captureCanvasCtx.drawImage(captureVideoElement, 0, 0, videoWidth, videoHeight);
+                    }
+
+                    requestAnimationFrame(drawVideo);
+                }
+
+                drawVideo();
+                showToast('📸', 'Camera ready!');
+            } catch (err) {
+                console.error('Camera error:', err);
+                showToast('❌', 'Could not access camera');
+            }
+        }
+
+        function toggleTimerMode() {
+            timerMode = !timerMode;
+            document.getElementById('timerIndicator').textContent = timerMode ? '⏱️ On' : '⏱️ Off';
+            showToast('⏱️', timerMode ? 'Timer mode ON' : 'Timer mode OFF');
+        }
+
+        function startTimerPhoto() {
+            const timerOverlay = document.getElementById('timerOverlay');
+            const timerDisplay = document.getElementById('timerDisplay');
+
+            countdownValue = 3;
+            timerOverlay.style.display = 'flex';
+            timerDisplay.textContent = countdownValue;
+
+            if (timerInterval) clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                countdownValue--;
+                timerDisplay.textContent = countdownValue;
+
+                if (countdownValue <= 0) {
+                    clearInterval(timerInterval);
+                    timerOverlay.style.display = 'none';
+                    takePhoto();
+                }
+            }, 1000);
+        }
+
+        function takePhoto() {
+            if (!captureCanvasCtx || !captureCanvasElement) return;
+
+            const photoCanvas = document.createElement('canvas');
+            photoCanvas.width = captureCanvasElement.width;
+            photoCanvas.height = captureCanvasElement.height;
+            const photoCtx = photoCanvas.getContext('2d');
+            photoCtx.drawImage(captureCanvasElement, 0, 0);
+
+            const photoData = photoCanvas.toDataURL('image/png');
+
+            capturedPhotos.push({
+                data: photoData,
+                timestamp: Date.now(),
+                id: photoCount++
+            });
+
+            // Auto-download the photo
+            const link = document.createElement('a');
+            link.download = `gesture-photo-${Date.now()}.png`;
+            link.href = photoData;
+            link.click();
+
+            updatePhotoGallery();
+            showToast('📸', `Photo ${capturedPhotos.length} captured & saved!`);
+        }
+
+        function updatePhotoGallery() {
+            if (!photoGalleryElement) return;
+
+            if (capturedPhotos.length === 0) {
+                photoGalleryElement.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-secondary); padding:10px;">No photos yet. Photos auto-save when taken.</div>';
+                return;
+            }
+
+            photoGalleryElement.innerHTML = capturedPhotos.slice(-12).reverse().map(photo => `
+                <div style="position:relative; aspect-ratio:1/1; border-radius:8px; overflow:hidden; cursor:pointer; border:2px solid var(--accent-4);" onclick="downloadPhoto('${photo.data}')">
+                    <img src="${photo.data}" style="width:100%; height:100%; object-fit:cover;">
+                    <div style="position:absolute; bottom:0; right:0; background:rgba(0,0,0,0.6); color:#fff; font-size:0.6rem; padding:2px 4px;">📥</div>
+                </div>
+            `).join('');
+        }
+
+        function downloadPhoto(dataUrl) {
+            const link = document.createElement('a');
+            link.download = `gesture-photo-${Date.now()}.png`;
+            link.href = dataUrl;
+            link.click();
+            showToast('💾', 'Photo downloaded again!');
+        }
+
+        function switchCamera() {
+            usingFrontCamera = !usingFrontCamera;
+            startCaptureCamera();
+            showToast('🔄', `Switched to ${usingFrontCamera ? 'front' : 'back'} camera`);
+        }
+
+        function clearPhotos() {
+            capturedPhotos = [];
+            photoCount = 0;
+            updatePhotoGallery();
+            showToast('🗑️', 'Gallery cleared');
+        }
+
+        function updateIndicators() {
+            document.getElementById('cameraIndicator').textContent = usingFrontCamera ? '📷 Front' : '📷 Back';
+            document.getElementById('timerIndicator').textContent = timerMode ? '⏱️ On' : '⏱️ Off';
+        }
+
+        function processCameraGesture(lm) {
+            const f = countFingersUp(lm);
+            const now = Date.now();
+
+            if (now - lastGestureTime < 800) return;
+
+            // Index finger only = take photo
+            if (lm[8].y < lm[6].y && lm[12].y > lm[10].y && f === 1) {
+                if (timerMode) {
+                    startTimerPhoto();
+                } else {
+                    takePhoto();
+                }
+                lastGestureTime = now;
+            }
+            // Peace sign = switch camera
+            else if (lm[8].y < lm[6].y && lm[12].y < lm[10].y && lm[16].y > lm[14].y && f === 2) {
+                switchCamera();
+                lastGestureTime = now;
+            }
+            // Three fingers = toggle timer
+            else if (f === 3) {
+                toggleTimerMode();
+                lastGestureTime = now;
+            }
+            // Fist = close module
+            else if (isFist(lm)) {
+                closeModule();
+                lastGestureTime = now;
+            }
+        }
+
+        // ==================== MODULE 4: AR CONTROL ====================
+        let currentARObjectType = 'cube';
+        let lastARControlTime = 0;
+        const AR_CONTROL_COOLDOWN = 200;
+
+        function initARModule() {
+            const container = document.getElementById('arContainer');
+            if (!container) return;
+            
+            showToast('🕶️', 'Initializing AR... Please wait');
+            
+            // Create AR scene with proper configuration
+            container.innerHTML = `
+                <a-scene id="arScene" embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; maxDetectionRate: 30; canvasWidth: 800; canvasHeight: 600;" style="width:100%; height:100%;">
+                    <a-marker preset="hiro" id="arMarker">
+                        <a-entity id="arObject" geometry="primitive: cube; depth:0.5; height:0.5; width:0.5" material="color: #e94560; shader: flat" position="0 0.5 0" scale="1 1 1" rotation="0 0 0"></a-entity>
+                    </a-marker>
+                    <a-entity camera></a-entity>
+                </a-scene>
+            `;
+            
+            // Wait for scene to load
+            setTimeout(() => {
+                arScene = document.getElementById('arScene');
+                const marker = document.getElementById('arMarker');
+                
+                if (arScene && marker) {
+                    showToast('✅', 'AR ready! Point at HIRO marker');
+                    document.getElementById('arObjectInfo').textContent = 'Current object: Cube';
+                    
+                    // Add event listeners for marker detection
+                    marker.addEventListener('markerFound', () => {
+                        showToast('🎯', 'Marker found! Object appearing');
+                        // Make sure object is visible
+                        const obj = document.getElementById('arObject');
+                        if (obj) {
+                            obj.setAttribute('visible', 'true');
+                        }
+                    });
+                    
+                    marker.addEventListener('markerLost', () => {
+                        showToast('👋', 'Marker lost - move camera to find it again');
+                    });
+                    
+                    console.log('AR Scene initialized');
+                } else {
+                    showToast('❌', 'AR initialization failed');
+                }
+            }, 3000); // Give it more time to initialize
+        }
+
+        function loadARObject(type) {
+            const marker = document.getElementById('arMarker');
+            if (!marker) {
+                showToast('❌', 'AR not initialized yet - please wait');
+                return;
+            }
+            
+            // Remove old object
+            const oldObj = document.getElementById('arObject');
+            if (oldObj) oldObj.remove();
+            
+            // Create new object
+            const newObj = document.createElement('a-entity');
+            newObj.id = 'arObject';
+            
+            // Configure based on type
+            switch(type) {
+                case 'cube':
+                    newObj.setAttribute('geometry', 'primitive: cube; depth:0.5; height:0.5; width:0.5');
+                    newObj.setAttribute('material', 'color: #e94560; shader: flat');
+                    break;
+                case 'sphere':
+                    newObj.setAttribute('geometry', 'primitive: sphere; radius:0.3');
+                    newObj.setAttribute('material', 'color: #00d2ff; shader: flat');
+                    break;
+                case 'pyramid':
+                    newObj.setAttribute('geometry', 'primitive: cone; radiusBottom:0.3; height:0.6');
+                    newObj.setAttribute('material', 'color: #ff9a00; shader: flat');
+                    break;
+                case 'dodecahedron':
+                    newObj.setAttribute('geometry', 'primitive: dodecahedron; radius:0.3');
+                    newObj.setAttribute('material', 'color: #7928ca; shader: flat');
+                    break;
+                case 'torus':
+                    newObj.setAttribute('geometry', 'primitive: torus; radius:0.3; radiusTubular:0.1');
+                    newObj.setAttribute('material', 'color: #00ff88; shader: flat');
+                    break;
+            }
+            
+            newObj.setAttribute('position', '0 0.5 0');
+            newObj.setAttribute('scale', '1 1 1');
+            newObj.setAttribute('rotation', '0 0 0');
+            
+            marker.appendChild(newObj);
+            currentARObjectType = type;
+            moduleStates.ar.scale = 1;
+            moduleStates.ar.rotation = 0;
+            
+            document.getElementById('arObjectInfo').textContent = `Current object: ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+            showToast('🕶️', `Loaded: ${type}`);
+        }
+
+        function processARControl(lm) {
+            const now = Date.now();
+            if (now - lastARControlTime < AR_CONTROL_COOLDOWN) return;
+            
+            const obj = document.getElementById('arObject');
+            if (!obj) return;
+            
+            const fingers = countFingersUp(lm);
+            const d = dist(lm[4], lm[8]);
+            
+            // Pinch (fingers close) = scale down
+            if (d < 0.05 && fingers === 2) {
+                moduleStates.ar.scale = Math.max(0.3, moduleStates.ar.scale - 0.1);
+                obj.setAttribute('scale', `${moduleStates.ar.scale} ${moduleStates.ar.scale} ${moduleStates.ar.scale}`);
+                showToast('🔽', `Scale: ${Math.round(moduleStates.ar.scale * 100)}%`);
+                lastARControlTime = now;
+            }
+            // Spread (fingers far) = scale up
+            else if (d > 0.15 && fingers === 2) {
+                moduleStates.ar.scale = Math.min(2.0, moduleStates.ar.scale + 0.1);
+                obj.setAttribute('scale', `${moduleStates.ar.scale} ${moduleStates.ar.scale} ${moduleStates.ar.scale}`);
+                showToast('🔼', `Scale: ${Math.round(moduleStates.ar.scale * 100)}%`);
+                lastARControlTime = now;
+            }
+            // One finger = rotate
+            else if (fingers === 1 && lm[8].y < lm[6].y) {
+                moduleStates.ar.rotation = (moduleStates.ar.rotation + 15) % 360;
+                obj.setAttribute('rotation', `0 ${moduleStates.ar.rotation} 0`);
+                showToast('🔄', `Rotation: ${moduleStates.ar.rotation}°`);
+                lastARControlTime = now;
+            }
+            // Open palm = move (simulated by toggling position)
+            else if (isOpenPalm(lm) && fingers >= 4) {
+                const positions = ['0 0.5 0', '0.3 0.5 0', '-0.3 0.5 0', '0 0.8 0', '0 0.2 0'];
+                const currentPos = moduleStates.ar.position.x;
+                moduleStates.ar.position.x = (moduleStates.ar.position.x + 1) % positions.length;
+                obj.setAttribute('position', positions[moduleStates.ar.position.x]);
+                showToast('📍', 'Object moved');
+                lastARControlTime = now;
+            }
+            // Fist = reset
+            else if (isFist(lm)) {
+                moduleStates.ar.scale = 1;
+                moduleStates.ar.rotation = 0;
+                moduleStates.ar.position.x = 0;
+                obj.setAttribute('scale', '1 1 1');
+                obj.setAttribute('rotation', '0 0 0');
+                obj.setAttribute('position', '0 0.5 0');
+                showToast('✊', 'Object reset');
+                lastARControlTime = now;
+            }
+        }
+
+        // ==================== UTILS ====================
+        let toastTimeout;
+        function showToast(icon, text) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastIcon').textContent = icon;
+            document.getElementById('toastText').textContent = text;
+            t.classList.add('show');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => t.classList.remove('show'), 1500);
+        }
+
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeModule();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModule();
+        });
+    </script>
+</body>
+</html>
